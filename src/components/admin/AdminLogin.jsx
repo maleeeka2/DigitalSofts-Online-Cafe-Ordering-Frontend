@@ -59,7 +59,7 @@ const AdminLogin = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Email / Username</label>
+              <label className="block text-sm font-medium text-gray-700">text / Username</label>
               <input
                 required
                 type="text"
