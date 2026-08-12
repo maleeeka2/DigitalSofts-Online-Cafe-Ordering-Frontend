@@ -1,92 +1,75 @@
-\# API Test Execution Results
+# API Test Execution Results
 
+## Execution
 
+- Tool: Postman Collection Runner
+- Collection: Spice Corner API QA Collection
+- Date: 2026-08-12
+- Base URL: http://localhost:5000
+- Iterations: 1
 
-\## Execution
-
-
-
-\- Tool: Newman (Postman CLI)
-
-\- Collection: Spice Corner API QA Collection
-
-\- Date: 2026-08-12
-
-\- Base URL: http://localhost:5000
-
-
-
-\## Results
-
-
+## Results
 
 | Metric | Result |
-
 |---|---:|
+| Tests executed | 34 |
+| Passed tests | 34 |
+| Failed tests | 0 |
+| Skipped tests | 0 |
+| Errors | 0 |
+| Average response time | 44 ms |
+| Total duration | 3.51 seconds |
 
-| Requests executed | 16 |
+## Coverage
 
-| Failed requests | 0 |
+The collection includes API validation for:
 
-| Test scripts | 16 |
+- Health endpoint
+- Customer authentication
+- Admin authentication
+- Menu retrieval
+- Menu response validation
+- Unauthorized menu modification
+- Invalid menu update
+- Invalid order quantity
+- Invalid order tracking
+- Unauthorized order access
+- Unauthorized cart access
+- Unauthorized cart modification
+- Unauthorized payment access
+- Unauthorized current-user access
+- Unauthorized user profile access
+- Unauthorized rider access
+- Unauthorized delivery access
 
-| Failed test scripts | 0 |
+## Negative and Authorization Testing
 
-| Assertions | 21 |
+The collection includes negative API scenarios such as:
 
-| Failed assertions | 0 |
+- Invalid customer credentials
+- Invalid admin credentials
+- Unauthorized resource access
+- Invalid input values
+- Invalid order quantities
+- Unauthorized modification attempts
+- Unauthorized payment access
 
-| Average response time | 58 ms |
+Expected error responses were validated through Postman test assertions.
 
-| Minimum response time | 3 ms |
+## Result
 
-| Maximum response time | 334 ms |
+**PASS — 34/34 Postman tests passed with 0 failures and 0 errors.**
 
-| Total duration | 2.2 seconds |
+Average response time during this execution was **44 ms**.
 
+## Evidence
 
+The Postman Collection Runner execution on 2026-08-12 reported:
 
-\## Coverage
-
-
-
-\- Health endpoint
-
-\- Invalid customer authentication
-
-\- Invalid admin authentication
-
-\- Menu retrieval and response structure
-
-\- Unauthorized menu modification
-
-\- Invalid menu update
-
-\- Invalid order quantity
-
-\- Invalid order tracking
-
-\- Unauthorized order access
-
-\- Unauthorized cart access
-
-\- Unauthorized cart modification
-
-\- Unauthorized payment access
-
-\- Unauthorized current-user access
-
-\- Unauthorized user profile access
-
-\- Unauthorized rider access
-
-\- Unauthorized delivery access
-
-
-
-\## Result
-
-
-
-\*\*PASS — 16/16 requests executed successfully with 21/21 assertions passing.\*\*
-
+- 34 total tests
+- 34 passed
+- 0 failed
+- 0 skipped
+- 0 errors
+- 1 iteration
+- 3.51 second total duration
