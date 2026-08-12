@@ -15,11 +15,6 @@ jobs:
         image: mongo:7
         ports:
           - 27017:27017
-        options: >-
-          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
 
     steps:
       - name: Checkout frontend
@@ -34,8 +29,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: 24
 
       - name: Install frontend
         run: npm ci
@@ -63,19 +57,28 @@ jobs:
           CLIENT_URL: http://127.0.0.1:5173
           NODE_ENV: development
         run: |
-          nohup npm start > ../backend.log 2>&1 &
-          echo $! > ../backend.pid
+          npm start > ../backend.log 2>&1 &
+          BACKEND_PID=$!
+          echo "Backend PID: $BACKEND_PID"
 
-      - name: Wait for backend
-        run: |
           for i in {1..30}; do
             if curl -sf http://127.0.0.1:5000/api/health; then
               echo "BACKEND READY"
               exit 0
             fi
+
+            if ! kill -0 $BACKEND_PID 2>/dev/null; then
+              echo "BACKEND PROCESS DIED"
+              cat ../backend.log
+              exit 1
+            fi
+
+            echo "Waiting for backend... $i/30"
             sleep 2
           done
-          cat backend.log || true
+
+          echo "BACKEND TIMEOUT"
+          cat ../backend.log
           exit 1
 
       - name: Install Playwright
