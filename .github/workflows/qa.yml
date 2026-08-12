@@ -9,13 +9,29 @@ on:
       - main
 
 jobs:
-  frontend-tests:
-    name: Frontend QA Tests
+  test:
     runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout frontend
         uses: actions/checkout@v4
+
+      - name: Checkout backend
+        uses: actions/checkout@v4
+        with:
+          repository: maleeeka2/DigitalSofts-Online-Cafe-Ordering-Backend
+          path: backend
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -23,11 +39,60 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         run: npm ci
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Seed backend database
+        working-directory: backend
+        env:
+          MONGO_URI: mongodb://127.0.0.1:27017/spicecorner
+          ADMIN_USERNAME: admin
+          ADMIN_PASSWORD: admin123
+        run: npm run seed
+
+      - name: Start backend
+        working-directory: backend
+        env:
+          MONGO_URI: mongodb://127.0.0.1:27017/spicecorner
+          PORT: 5000
+          JWT_SECRET: test-secret
+          ADMIN_USERNAME: admin
+          ADMIN_PASSWORD: admin123
+          CLIENT_URL: http://127.0.0.1:5173
+          NODE_ENV: development
+        run: |
+          nohup npm start > ../backend.log 2>&1 &
+          echo $! > ../backend.pid
+
+      - name: Wait for backend
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://127.0.0.1:5000/api/health; then
+              echo "Backend is ready"
+              exit 0
+            fi
+            echo "Waiting for backend... ($i/30)"
+            sleep 2
+          done
+          echo "===== BACKEND LOG ====="
+          cat backend.log || true
+          exit 1
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Start frontend
+        run: npm run dev -- --host 0.0.0.0 > frontend.log 2>&1 &
+
+      - name: Wait for frontend
+        run: npx wait-on http://127.0.0.1:5173
 
       - name: Run Playwright tests
         run: npx playwright test
@@ -40,10 +105,18 @@ jobs:
           path: playwright-report/
           if-no-files-found: ignore
 
-      - name: Upload test results
+      - name: Upload backend log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-test-results
-          path: test-results/
+          name: backend-log
+          path: backend.log
+          if-no-files-found: ignore
+
+      - name: Upload frontend log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-log
+          path: frontend.log
           if-no-files-found: ignore
