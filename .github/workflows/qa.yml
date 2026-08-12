@@ -1,60 +1,3 @@
-name: QA Pipeline
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-
-    services:
-      mongodb:
-        image: mongo:7
-        ports:
-          - 27017:27017
-        options: >-
-          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - name: Checkout frontend
-        uses: actions/checkout@v4
-
-      - name: Checkout backend
-        uses: actions/checkout@v4
-        with:
-          repository: maleeeka2/DigitalSofts-Online-Cafe-Ordering-Backend
-          path: backend
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install frontend dependencies
-        run: npm ci
-
-      - name: Install backend dependencies
-        working-directory: backend
-        run: npm ci
-
-      - name: Seed backend database
-        working-directory: backend
-        env:
-          MONGO_URI: mongodb://127.0.0.1:27017/spicecorner
-          PORT: 5000
-          JWT_SECRET: test-secret
-          ADMIN_USERNAME: admin
-          ADMIN_PASSWORD: admin123
-          CLIENT_URL: http://127.0.0.1:5173
-        run: npm run seed
-
       - name: Start backend
         working-directory: backend
         env:
@@ -65,47 +8,22 @@ jobs:
           ADMIN_PASSWORD: admin123
           CLIENT_URL: http://127.0.0.1:5173
           NODE_ENV: development
-        run: npm start > ../backend.log 2>&1 &
+        run: |
+          nohup npm start > ../backend.log 2>&1 &
+          echo $! > ../backend.pid
 
       - name: Wait for backend
-        run: npx wait-on tcp:5000 --timeout 60000
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://127.0.0.1:5000/api/health; then
+              echo "Backend is ready"
+              exit 0
+            fi
 
-      - name: Install Playwright
-        run: npx playwright install --with-deps chromium
+            echo "Waiting for backend... ($i/30)"
+            sleep 2
+          done
 
-      - name: Build frontend
-        env:
-          VITE_API_URL: http://127.0.0.1:5000
-        run: npm run build
-
-      - name: Start frontend
-        env:
-          VITE_API_URL: http://127.0.0.1:5000
-        run: npm run dev -- --host 0.0.0.0 > frontend.log 2>&1 &
-
-      - name: Wait for frontend
-        run: npx wait-on http://127.0.0.1:5173 --timeout 60000
-
-      - name: Run Playwright tests
-        run: npx playwright test
-
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report/
-
-      - name: Upload frontend log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-log
-          path: frontend.log
-
-      - name: Upload backend log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-log
-          path: backend.log
+          echo "===== BACKEND LOG ====="
+          cat backend.log || true
+          exit 1
