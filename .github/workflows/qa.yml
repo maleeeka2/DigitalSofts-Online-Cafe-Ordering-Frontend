@@ -10,9 +10,26 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
-      - name: Checkout
+      - name: Checkout frontend
         uses: actions/checkout@v4
+
+      - name: Checkout backend
+        uses: actions/checkout@v4
+        with:
+          repository: maleeeka2/DigitalSofts-Online-Cafe-Ordering-Backend
+          path: backend
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -20,16 +37,50 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         run: npm ci
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Seed backend database
+        working-directory: backend
+        env:
+          MONGO_URI: mongodb://127.0.0.1:27017/spicecorner
+          PORT: 5000
+          JWT_SECRET: test-secret
+          ADMIN_USERNAME: admin
+          ADMIN_PASSWORD: admin123
+          CLIENT_URL: http://127.0.0.1:5173
+        run: npm run seed
+
+      - name: Start backend
+        working-directory: backend
+        env:
+          MONGO_URI: mongodb://127.0.0.1:27017/spicecorner
+          PORT: 5000
+          JWT_SECRET: test-secret
+          ADMIN_USERNAME: admin
+          ADMIN_PASSWORD: admin123
+          CLIENT_URL: http://127.0.0.1:5173
+          NODE_ENV: development
+        run: npm start > ../backend.log 2>&1 &
+
+      - name: Wait for backend
+        run: npx wait-on http://127.0.0.1:5000/api/health
 
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
 
       - name: Build frontend
+        env:
+          VITE_API_URL: http://127.0.0.1:5000
         run: npm run build
 
       - name: Start frontend
+        env:
+          VITE_API_URL: http://127.0.0.1:5000
         run: npm run dev -- --host 0.0.0.0 > frontend.log 2>&1 &
 
       - name: Wait for frontend
@@ -51,3 +102,10 @@ jobs:
         with:
           name: frontend-log
           path: frontend.log
+
+      - name: Upload backend log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-log
+          path: backend.log
