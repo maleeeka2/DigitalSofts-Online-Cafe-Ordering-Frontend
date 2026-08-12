@@ -9,7 +9,8 @@ on:
       - main
 
 jobs:
-  test:
+  qa:
+    name: Full QA - Frontend + Backend
     runs-on: ubuntu-latest
 
     services:
@@ -19,9 +20,9 @@ jobs:
           - 27017:27017
         options: >-
           --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
-          --health-interval 10s
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
     steps:
       - name: Checkout frontend
@@ -46,7 +47,7 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Seed backend database
+      - name: Seed test database
         working-directory: backend
         env:
           MONGO_URI: mongodb://127.0.0.1:27017/spicecorner
@@ -68,33 +69,27 @@ jobs:
           nohup npm start > ../backend.log 2>&1 &
           echo $! > ../backend.pid
 
-      - name: Wait for backend
+      - name: Wait for backend health
         run: |
           for i in {1..30}; do
             if curl -sf http://127.0.0.1:5000/api/health; then
               echo "Backend is ready"
               exit 0
             fi
-            echo "Waiting for backend... ($i/30)"
+            echo "Waiting for backend... $i/30"
             sleep 2
           done
+
           echo "===== BACKEND LOG ====="
           cat backend.log || true
           exit 1
 
-      - name: Install Playwright browsers
+      - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
-      - name: Build frontend
-        run: npm run build
-
-      - name: Start frontend
-        run: npm run dev -- --host 0.0.0.0 > frontend.log 2>&1 &
-
-      - name: Wait for frontend
-        run: npx wait-on http://127.0.0.1:5173
-
       - name: Run Playwright tests
+        env:
+          VITE_API_URL: http://127.0.0.1:5000/api
         run: npx playwright test
 
       - name: Upload Playwright report
@@ -111,12 +106,4 @@ jobs:
         with:
           name: backend-log
           path: backend.log
-          if-no-files-found: ignore
-
-      - name: Upload frontend log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-log
-          path: frontend.log
           if-no-files-found: ignore
