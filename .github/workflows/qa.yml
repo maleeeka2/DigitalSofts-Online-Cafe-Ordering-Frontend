@@ -68,7 +68,7 @@ jobs:
         run: npm start > ../backend.log 2>&1 &
 
       - name: Wait for backend
-        run: npx wait-on http://127.0.0.1:5000/api/health
+        run: npx wait-on http://127.0.0.1:5000/api/health --timeout 60000
 
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
