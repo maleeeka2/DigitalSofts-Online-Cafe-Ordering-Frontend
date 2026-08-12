@@ -2,15 +2,12 @@ name: QA Pipeline
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   qa:
-    name: Full QA - Frontend + Backend
     runs-on: ubuntu-latest
 
     services:
@@ -34,20 +31,20 @@ jobs:
           repository: maleeeka2/DigitalSofts-Online-Cafe-Ordering-Backend
           path: backend
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - name: Install frontend dependencies
+      - name: Install frontend
         run: npm ci
 
-      - name: Install backend dependencies
+      - name: Install backend
         working-directory: backend
         run: npm ci
 
-      - name: Seed test database
+      - name: Seed database
         working-directory: backend
         env:
           MONGO_URI: mongodb://127.0.0.1:27017/spicecorner
@@ -69,27 +66,28 @@ jobs:
           nohup npm start > ../backend.log 2>&1 &
           echo $! > ../backend.pid
 
-      - name: Wait for backend health
+      - name: Wait for backend
         run: |
           for i in {1..30}; do
             if curl -sf http://127.0.0.1:5000/api/health; then
-              echo "Backend is ready"
+              echo "BACKEND READY"
               exit 0
             fi
-            echo "Waiting for backend... $i/30"
             sleep 2
           done
-
-          echo "===== BACKEND LOG ====="
           cat backend.log || true
           exit 1
 
-      - name: Install Playwright browser
+      - name: Install Playwright
         run: npx playwright install --with-deps chromium
 
-      - name: Run Playwright tests
-        env:
-          VITE_API_URL: http://127.0.0.1:5000/api
+      - name: Start frontend
+        run: nohup npm run dev -- --host 127.0.0.1 > frontend.log 2>&1 &
+
+      - name: Wait for frontend
+        run: npx wait-on http://127.0.0.1:5173
+
+      - name: Run Playwright
         run: npx playwright test
 
       - name: Upload Playwright report
