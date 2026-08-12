@@ -1,19 +1,20 @@
 import { test, expect } from '@playwright/test';
 
-const API = const API = 'http://127.0.0.1:5000';
+const BASE = 'http://localhost:5173';
+const API = 'http://127.0.0.1:5000';
 
 test('01 Homepage loads', async ({ page }) => {
-  await page.goto('/');
+  await page.goto(BASE);
   await expect(page.locator('body')).not.toBeEmpty();
 });
 
 test('02 Homepage responds', async ({ page }) => {
-  const r = await page.goto('/');
+  const r = await page.goto(BASE);
   expect(r.status()).toBeLessThan(400);
 });
 
 test('03 Homepage has content', async ({ page }) => {
-  await page.goto('/');
+  await page.goto(BASE);
   expect(await page.locator('body').innerText()).toBeTruthy();
 });
 
@@ -111,49 +112,49 @@ test('21 Unknown API route rejected', async ({ request }) => {
 });
 
 test('22 Admin login page loads', async ({ page }) => {
-  await page.goto('/admin/login');
+  await page.goto(`${BASE}/admin/login`);
   await expect(page.locator('body')).not.toBeEmpty();
 });
 
 test('23 Admin login has password field', async ({ page }) => {
-  await page.goto('/admin/login');
+  await page.goto(`${BASE}/admin/login`);
   await expect(page.locator('input[type="password"]')).toBeVisible();
 });
 
 test('24 Admin login has input fields', async ({ page }) => {
-  await page.goto('/admin/login');
+  await page.goto(`${BASE}/admin/login`);
   expect(await page.locator('input').count()).toBeGreaterThan(0);
 });
 
 test('25 Admin password accepts input', async ({ page }) => {
-  await page.goto('/admin/login');
+  await page.goto(`${BASE}/admin/login`);
   const p = page.locator('input[type="password"]');
   await p.fill('test-password');
   await expect(p).toHaveValue('test-password');
 });
 
 test('26 Admin username accepts text', async ({ page }) => {
-  await page.goto('/admin/login');
+  await page.goto(`${BASE}/admin/login`);
   const i = page.locator('input').first();
   await i.fill('admin');
   await expect(i).toHaveValue('admin');
 });
 
 test('27 Homepage reload works', async ({ page }) => {
-  await page.goto('/');
+  await page.goto(BASE);
   await page.reload();
   await expect(page.locator('body')).not.toBeEmpty();
 });
 
 test('28 Mobile homepage loads', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
+  await page.goto(BASE);
   await expect(page.locator('body')).not.toBeEmpty();
 });
 
 test('29 Mobile admin login loads', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/admin/login');
+  await page.goto(`${BASE}/admin/login`);
   await expect(page.locator('body')).not.toBeEmpty();
 });
 
@@ -179,6 +180,7 @@ test('33 Prices are finite', async ({ request }) => {
 
 test('34 Core menu fields exist', async ({ request }) => {
   const d = await (await request.get(`${API}/api/menu`)).json();
+
   for (const x of d) {
     expect(x._id).toBeTruthy();
     expect(x.name).toBeTruthy();
